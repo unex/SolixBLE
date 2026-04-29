@@ -540,7 +540,7 @@ class SolixBLEDevice:
         else:
             # Strip fragment info
             payload = payload[1:]
-        
+
         decrypted_payload = self._decrypt_payload(payload)
         _LOGGER.debug(f"Decrypted payload: {decrypted_payload.hex()}")
         parameters = self._parse_payload(decrypted_payload)
@@ -549,7 +549,8 @@ class SolixBLEDevice:
     async def _process_telemetry(self, parameters: dict[str, bytes]) -> None:
         """Process telemetry data from the device."""
 
-        state_changed = self._data is None or parameters != self._data
+        new_params: dict[str, bytes] = (self._data or {}) | parameters # update any new parameters from _data
+        state_changed = self._data is None or new_params != self._data
 
         if _LOGGER.isEnabledFor(logging.DEBUG):
             _LOGGER.debug(
@@ -562,7 +563,7 @@ class SolixBLEDevice:
                 # If we have previous data to compare against log the diff
                 if self._data is not None:
                     _LOGGER.debug("Parameters have changed since previous update!")
-                    self._log_diff(self._data, parameters)
+                    self._log_diff(self._data, new_params)
 
                 # Else log the parameters but with the types
                 else:
@@ -571,7 +572,7 @@ class SolixBLEDevice:
                     )
 
         # Update internal parameters
-        self._data = parameters
+        self._data = new_params
         self._last_data_timestamp = datetime.now()
 
         # Run callbacks if state changed
